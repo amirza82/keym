@@ -8,9 +8,9 @@
 #include <signal.h>
 
 static const int idle_cutoff = 500; /* time before program exits by itself if no usage detected */
-static const int speeds[5] = {80, 400, 1400, 4000, 10000}; /* mouse movement speeds */
+static const int speeds[5] = {80, 400, 1400, 4000, 20000}; /* mouse movement speeds */
 static const int scroll[5] = {1000, 5000, 30000, 50000, 100000}; /* scrolling speeds */
-static const char* unmap[] = {"k", "h", "j", "l", "q", "e", "y", "g", "i", "u", "o", "Shift_L", "Left", "Right", "Up", "Down", "Control_R", "Escape"};
+static const char* unmap[] = {"k", "h", "j", "l", "q", "e", "y", "g", "i", "u", "o", "Shift_L", "Left", "Right", "Up", "Down", "Control_R"};
 
 KeySym *keysyms, *original;
 fd_set in_fds;
@@ -114,7 +114,7 @@ int main()
         speed = 2;
         speed = (pressed(XK_g)) ? 4 : speed;
         // speed = (pressed(XK_Tab)) ? 3 : speed;
-        speed = (pressed(XK_Shift_L)) ? 1 : speed;
+        speed = (pressed(XK_Shift_L)) ? 0 : speed;
         // speed = (pressed(XK_semicolon)) ? 0 : speed;
 
         /* mouse clicks */
@@ -125,7 +125,7 @@ int main()
         // XTestFakeButtonEvent(display, 9, pressed(XK_o) ? True : False, CurrentTime);
 
         /* exit */
-        if (pressed(XK_q) || (pressed(XK_Escape)))
+        if (pressed(XK_q))
             quit();
 
         /* option to grab whole keyboard focus - this is useful for some applications that try to do their own input handling */
