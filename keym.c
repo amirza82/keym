@@ -1,13 +1,29 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/select.h>
 #include <X11/extensions/XTest.h>
 #include <X11/keysym.h>
+#include <unistd.h>
+#include <signal.h>
 
 static const int idle_cutoff = 500; /* time before program exits by itself if no usage detected */
 static const int speeds[5] = {80, 400, 1400, 4000, 10000}; /* mouse movement speeds */
 static const int scroll[5] = {1000, 5000, 30000, 50000, 100000}; /* scrolling speeds */
-static const char* unmap[] = {"w", "a", "s", "d", "q", "e", "r", "f", "g", "h", "j", "k", "l", "semicolon", "i", "c", "u", "o", "Shift_L", "backslash", "Tab", "Left", "Right", "Up", "Down", "x", "m", "Control_R"};
+static const char* unmap[] = {"k", "h", "j", "l", "q", "e", "y", "g", "i", "u", "o", "Shift_L", "Left", "Right", "Up", "Down", "Control_R", "Escape"};
+
+KeySym *keysyms, *original;
+fd_set in_fds;
+struct timeval tv;
+int x11_fd;
+int num_ready_fds;
+char idle = 1;
+char key_delta[6] = {0}; /* left, right, up, down, scroll up, scroll down */
+char speed = 2;          /* dash, fast, normal, slow, crawl */
+int first_keycode, max_keycode, ks_per_keystroke;
+int num_keycodes;
+int i,j;
+int len = sizeof(unmap)/sizeof(unmap[0]);
 
 static Display *display;
 static char keymap[32] = {0};
@@ -18,21 +34,23 @@ char pressed(int keycode)
     return (keymap[c / 8] & (1 << c % 8)) > 0;
 }
 
+void quit()
+{
+    if (!fork())
+        execlp("notify-send", "notify-send", "-u", "low", "keym: Disabled", (char *) NULL);
+    /* restore the original mapping */
+    XChangeKeyboardMapping(display, first_keycode, ks_per_keystroke, original, max_keycode-first_keycode);
+    XCloseDisplay(display);
+    exit(0);
+}
+
 int main()
 {
-    KeySym *keysyms, *original;
-    fd_set in_fds;
-    struct timeval tv;
-    int x11_fd;
-    int num_ready_fds;
-    char idle = 1;
-    char key_delta[6] = {0}; /* left, right, up, down, scroll up, scroll down */
-    char speed = 2;          /* dash, fast, normal, slow, crawl */
-    char quit = 0;
-    int first_keycode, max_keycode, ks_per_keystroke;
-    int num_keycodes;
-    int i,j;
-    int len = sizeof(unmap)/sizeof(unmap[0]);
+    // in case quit with Ctrl+c restore mappings
+    signal(SIGINT, quit);
+
+    if (!fork())
+        execlp("notify-send", "notify-send", "-u", "low", "keym: Enabled", (char *) NULL);
 
     if (!(display = XOpenDisplay(NULL)))
     {
@@ -83,40 +101,32 @@ int main()
         XQueryKeymap(display, keymap);
 
         /* mouse movement */
-        key_delta[0] = pressed(XK_Left)  || pressed(XK_a);
-        key_delta[1] = pressed(XK_Right) || pressed(XK_d);
-        key_delta[2] = pressed(XK_Up)    || pressed(XK_w);
-        key_delta[3] = pressed(XK_Down)  || pressed(XK_s);
+        key_delta[0] = pressed(XK_Left)  || pressed(XK_h);
+        key_delta[1] = pressed(XK_Right) || pressed(XK_l);
+        key_delta[2] = pressed(XK_Up)    || pressed(XK_k);
+        key_delta[3] = pressed(XK_Down)  || pressed(XK_j);
 
         /* scrolling */
-        key_delta[4] = pressed(XK_r);
-        key_delta[5] = pressed(XK_f);
+        key_delta[4] = pressed(XK_Y);
+        key_delta[5] = pressed(XK_E);
 
         /* speed adjustment from slow to fast */
         speed = 2;
         speed = (pressed(XK_g)) ? 4 : speed;
-        speed = (pressed(XK_h) || pressed(XK_backslash) || pressed(XK_Tab)) ? 3 : speed;
-        speed = (pressed(XK_l) || pressed(XK_Shift_L)) ? 1 : speed;
-        speed = (pressed(XK_semicolon)) ? 0 : speed;
+        // speed = (pressed(XK_Tab)) ? 3 : speed;
+        speed = (pressed(XK_Shift_L)) ? 1 : speed;
+        // speed = (pressed(XK_semicolon)) ? 0 : speed;
 
         /* mouse clicks */
-        XTestFakeButtonEvent(display, Button1, (pressed(XK_j) || pressed(XK_q)) ? True : False, CurrentTime);
-        XTestFakeButtonEvent(display, Button3, (pressed(XK_k) || pressed(XK_e)) ? True : False, CurrentTime);
-        XTestFakeButtonEvent(display, Button2, (pressed(XK_i) || pressed(XK_c)) ? True : False, CurrentTime);
-        XTestFakeButtonEvent(display, 8, pressed(XK_u) ? True : False, CurrentTime);
-        XTestFakeButtonEvent(display, 9, pressed(XK_o) ? True : False, CurrentTime);
+        XTestFakeButtonEvent(display, Button1, pressed(XK_u) ? True : False, CurrentTime);
+        XTestFakeButtonEvent(display, Button3, pressed(XK_o) ? True : False, CurrentTime);
+        XTestFakeButtonEvent(display, Button2, pressed(XK_i) ? True : False, CurrentTime);
+        // XTestFakeButtonEvent(display, 8, pressed(XK_u) ? True : False, CurrentTime);
+        // XTestFakeButtonEvent(display, 9, pressed(XK_o) ? True : False, CurrentTime);
 
         /* exit */
-        if (!pressed(XK_x) && !pressed(XK_m))
-            quit = 1;
-
-        if (quit == 1 && (pressed(XK_x) || pressed(XK_m)))
-        {
-            /* restore the original mapping */
-            XChangeKeyboardMapping(display, first_keycode, ks_per_keystroke, original, max_keycode-first_keycode);
-            XCloseDisplay(display);
-            return 0;
-        }
+        if (pressed(XK_q) || (pressed(XK_Escape)))
+            quit();
 
         /* option to grab whole keyboard focus - this is useful for some applications that try to do their own input handling */
         if (pressed(XK_Control_R))
