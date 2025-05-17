@@ -41,10 +41,14 @@ install: all
 	@echo installing executable file to ${DESTDIR}${PREFIX}/bin
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
 	@cp -f keym ${DESTDIR}${PREFIX}/bin
+	@echo installing man page to ${DESTDIR}${PREFIX}/share/man/man1
+	@cp -f keym.1 ${DESTDIR}${PREFIX}/share/man/man1
 	@chmod 755 ${DESTDIR}${PREFIX}/bin/keym
 
 uninstall:
 	@echo removing executable file from ${DESTDIR}${PREFIX}/bin
 	@rm -f ${DESTDIR}${PREFIX}/bin/keym
+	@echo removing manual from ${DESTDIR}${PREFIX}/share/man
+	@rm -f ${DESTDIR}${PREFIX}/share/man/man1/keym.1
 
 .PHONY: all options clean dist install uninstall
