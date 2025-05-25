@@ -10,7 +10,7 @@
 static const int idle_cutoff = 500; /* time before program exits by itself if no usage detected */
 static const int speeds[5] = {80, 400, 1400, 4000, 20000}; /* mouse movement speeds */
 static const int scroll[5] = {1000, 5000, 30000, 50000, 100000}; /* scrolling speeds */
-static const char* unmap[] = {"k", "h", "j", "l", "q", "e", "y", "g", "i", "u", "o", "Shift_L", "Left", "Right", "Up", "Down", "Control_R"};
+static const char* unmap[] = {"k", "h", "j", "l", "q", "e", "y", "g", "i", "u", "o", "Shift_L", "Control_R", "space"};
 
 KeySym *keysyms, *original;
 fd_set in_fds;
@@ -101,10 +101,10 @@ int main()
         XQueryKeymap(display, keymap);
 
         /* mouse movement */
-        key_delta[0] = pressed(XK_Left)  || pressed(XK_h);
-        key_delta[1] = pressed(XK_Right) || pressed(XK_l);
-        key_delta[2] = pressed(XK_Up)    || pressed(XK_k);
-        key_delta[3] = pressed(XK_Down)  || pressed(XK_j);
+        key_delta[0] = pressed(XK_h);
+        key_delta[1] = pressed(XK_l);
+        key_delta[2] = pressed(XK_k);
+        key_delta[3] = pressed(XK_j);
 
         /* scrolling */
         key_delta[4] = pressed(XK_Y);
@@ -118,7 +118,7 @@ int main()
         // speed = (pressed(XK_semicolon)) ? 0 : speed;
 
         /* mouse clicks */
-        XTestFakeButtonEvent(display, Button1, pressed(XK_u) ? True : False, CurrentTime);
+        XTestFakeButtonEvent(display, Button1, pressed(XK_u) || pressed(XK_space) ? True : False, CurrentTime);
         XTestFakeButtonEvent(display, Button3, pressed(XK_o) ? True : False, CurrentTime);
         XTestFakeButtonEvent(display, Button2, pressed(XK_i) ? True : False, CurrentTime);
         // XTestFakeButtonEvent(display, 8, pressed(XK_u) ? True : False, CurrentTime);
